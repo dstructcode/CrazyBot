@@ -158,7 +158,7 @@ def del_portfolio(nick, userhost, args):
     return ['Invalid arguments']
 
 def get_help():
-   return ".portfolio [<nickname>|add <symbol> [price]|del <symbol>] - Get the portfolio for a user"
+   return ".portfolio [<nickname>] [add <symbol> [price]] [del <symbol>] - Get the portfolio for a user"
 
 def run(nick, userhost, args=[]):
     if len(args) == 0:
