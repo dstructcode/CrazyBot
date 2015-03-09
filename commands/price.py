@@ -40,7 +40,7 @@ def run(nick, userhost, args=[]):
     day_low = stock.get_day_low()
     current = stock.get_price()
     trend = stock.get_trend()
-    now = datetime.now(pytz.timezone('EST'))
+    now = datetime.now(pytz.timezone('US/Eastern'))
     # Between market close and open (4:00pm and 9:30am)
     if time(16,00) <= now.time() or time(9,30) >= now.time():
         close = format_change(current, prev_close)
