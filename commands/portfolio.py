@@ -161,8 +161,6 @@ def get_help():
    return ".portfolio [<nickname>|add <symbol> [price]|del <symbol>] - Get the portfolio for a user"
 
 def run(nick, userhost, args=[]):
-    if nick == 'tripgod':
-        return ['nope']
     if len(args) == 0:
         p = user_portfolio(nick, userhost)
         if not p:
@@ -173,8 +171,6 @@ def run(nick, userhost, args=[]):
     if args[0] == 'del':
         return del_portfolio(nick, userhost, args[1:])
     if len(args) == 1:
-        if args[0] == 'tripgod':
-            return ['nope']
         p = user_portfolio(args[0], '')
         if not p:
             return ['No portfolio found for %s' % args[0]]
