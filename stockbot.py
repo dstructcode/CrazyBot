@@ -1,19 +1,47 @@
 #! /usr/bin/env python
 
+from threading import Thread
+
+import daemon
 import logging
+import os
 import sys
 import traceback
+import irc.buffer
 import irc.bot
+import irc.client
+import yaml
+
+LOG_FILENAME = 'stockbot.log'
+
+install_dir = os.path.dirname(os.path.abspath(__file__))
+
+logging.basicConfig(filename=install_dir+'/'+LOG_FILENAME, level=logging.DEBUG)
+log = logging.getLogger(__name__)
+fh = logging.root.handlers[0]
+context = daemon.DaemonContext(
+    files_preserve = [
+        fh.stream,
+    ],
+)
+
+class IgnoreErrorsBuffer(irc.buffer.DecodingLineBuffer):
+    def handle_exception(self):
+        pass
+irc.client.ServerConnection.buffer_class = IgnoreErrorsBuffer
 
 class StockBot(irc.bot.SingleServerIRCBot):
-    def __init__(self, nickname, channels, server, port=6667):
+    def __init__(self, nickname, channels, server, port=6667, database=None):
+        log.info("Instantiating StockBot for server %s" % server)
         irc.bot.SingleServerIRCBot.__init__(self, [(server, port)], nickname, nickname)
         self.channel_list = channels
+        self.database = database
 
     def on_nicknameinuse(self, c, e):
         c.nick(c.get_nickname() + "_")
 
     def on_welcome(self, c, e):
+        c.privmsg('nickserv', 'identify jd0205')
         for channel in self.channel_list:
             c.join(channel)
 
@@ -42,31 +70,63 @@ class StockBot(irc.bot.SingleServerIRCBot):
             if hlp:
                 c.privmsg(e.target,  module.get_help())
             else:
-                for response in module.run(e.source.nick, e.source.userhost, args):
+                log.info("Executing %s command" % cmd)
+                for response in module.run(e.source.nick, e.source.userhost, args, self.database):
                     c.privmsg(e.target, response)
-        except:
-            traceback.print_exc()
+        except ImportError:
+            pass # Module does not exist
+        except Exception, e:
+            log.exception(e)
+
+class BotThread(Thread):
+    def __init__(self, bot):
+        self._bot = bot
+        Thread.__init__(self)
+
+    def run(self):
+        self._bot.start()
 
 def main():
-    if len(sys.argv) < 4:
-        print("Usage: stockbot <server[:port]> <nickname> <channel> <channel> ...")
-        sys.exit(1)
+    try: 
+        f = open(install_dir+'/stockbot.yaml')
+        conf = yaml.safe_load(f)
+        f.close()
 
-    s = sys.argv[1].split(":", 1)
-    server = s[0]
-    if len(s) == 2:
-        try:
-            port = int(s[1])
-        except ValueError:
-            print("Error: invalid port")
-            sys.exit(1)
-    else:
-        port = 6667
-    nickname = sys.argv[2]
-    channels = sys.argv[3:]
+        if 'database' not in conf:
+            log.error('No sqlite database specified')
+            sys.exit(-1)
+        database = conf['database']
 
-    bot = StockBot(nickname, channels, server, port)
-    bot.start()
+        bots = []
+        for server, meta in conf['connections'].iteritems():
+            s = server.split(":", 1)
+            server = s[0]
+            if len(s) == 2:
+                try:
+                    port = int(s[1])
+                except ValueError:
+                    log.error("Invalid port")
+                    sys.exit(-1)
+            else:
+                port = 6667
+
+            if 'nickname' not in meta:
+                log.error('No nickname specified for server [%s]' % server)
+                sys.exit(-1)
+            nickname = meta['nickname']
+
+            if 'channels' not in meta:
+                log.error('No channels specified for server [%s]' % server)
+                sys.exit(-1)
+            channels = meta['channels']
+
+            bots.append(BotThread(StockBot(nickname, channels, server, port, database)))
+
+        for bot in bots:
+            bot.start()
+    except Exception, e:
+        log.exception(e)
 
 if __name__ == "__main__":
-    main()
+    with context:
+        main()

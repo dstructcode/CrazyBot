@@ -1,11 +1,13 @@
 from sqlalchemy import Column, DateTime, Float, String, Integer, ForeignKey, create_engine, func
 from sqlalchemy.orm import relationship, backref, sessionmaker, subqueryload
 from sqlalchemy.ext.declarative import declarative_base
-from yahoo_finance.quote import Quote
-import traceback
+from yahoo_finance.quote import GroupQuote, Quote
+
+import logging
+
+log = logging.getLogger(__name__)
 
 Base = declarative_base()
-
 
 class User(Base):
     __tablename__ = 'user'
@@ -30,9 +32,6 @@ class Stock(Base):
     portfolio = relationship(Portfolio, lazy='subquery', backref=backref('stock', uselist=True, lazy="subquery", cascade='delete,all'))
 
 
-engine = create_engine('sqlite:///portfolio.db')
-Base.metadata.create_all(engine)
-
 def get_portfolio(nick, userhost):
     Session = sessionmaker(bind=engine)
     session = Session()
@@ -41,13 +40,13 @@ def get_portfolio(nick, userhost):
     try:
         user = session.query(User).filter(User.userhost == userhost).one()
         p = session.query(Portfolio).filter(Portfolio.user.has(id=user.id)).one()
-    except:
-        traceback.print_exc()
+    except Exception, e:
+        log.exception(e)
         try:
             user = session.query(User).filter(User.nick == nick).one()
             p = session.query(Portfolio).filter(Portfolio.user.has(id=user.id)).one()
-        except:
-            traceback.print_exc()
+        except Exception, e:
+            log.exception(e)
             pass
     session.close()
     return p;
@@ -77,20 +76,36 @@ def format_change(curr, prev):
     return "%s \x03%s%.2f\x03 (\x03%s%.2f%%\x03)\x0f" % (curr, color, diff, color, percent) 
 
 def user_portfolio(nick, userhost):
+    log.info("Retrieving portfolio")
     BAR_SEP = "\x0307|\x03"
     portfolio = get_portfolio(nick, userhost)
     if not portfolio:
         return None
     Session = sessionmaker(bind=engine)
     session = Session()
-    response = ''
+    stocks = []
     for stock in session.query(Stock).filter(Stock.portfolio_id == portfolio.id).all():
-        quote = Quote(stock.symbol)
-        price = quote.get_price()
-        change = format_change(price, stock.price)
-        response = response + '%s %s: (%.2f) - %s ' % (BAR_SEP, stock.symbol, stock.price, change)
-    response = response + '%s' % (BAR_SEP)
-    return [response]
+        stocks.append((stock.symbol,stock.price))
+    quotes = GroupQuote([x for x,y in stocks])
+    response = ''
+    response_list = []
+    for symbol, price in stocks:
+        quote = quotes.get(symbol)
+        if quote:
+            try:
+                change = format_change(quote.get_price(), price)
+                response = response + '%s %s (%.2f): %s ' % (BAR_SEP, symbol, price, change)
+                if len(response) > 256:
+                    response_list.append(response)
+                    response = ''
+            except Exception, e:
+                log.exception(e)
+                response = response + '%s %s (%.2f): %s ' % (BAR_SEP, symbol, 0.00, "Unknown")
+    if len(response) > 0:
+        response_list.append(response)
+#    response = response + '%s' % (BAR_SEP)
+    log.info("Sending portfolio")
+    return response_list
 
 def stock_exists(symbol, portfolio):
     stock = Quote(symbol)
@@ -142,11 +157,14 @@ def del_stock(stock, portfolio):
     session = Session()
     p = session.query(Portfolio).filter(Portfolio.id == portfolio.id).one()
     stocks = session.query(Stock).filter(Stock.portfolio==p).filter(Stock.symbol==stock.get_symbol()).all()
+    response = '[%s] Symbol not found' % portfolio.user.nick
     for s in stocks:
         session.delete(s)
+    if stocks:
+        response = '[%s] %s deleted from portfolio' % (portfolio.user.nick, stock.get_symbol())
     session.commit()
     session.close()
-    return ['[%s] %s deleted from portfolio' % (portfolio.user.nick, stock.get_symbol())]
+    return [response]
 
 def del_portfolio(nick, userhost, args):
     portfolio = get_portfolio(nick, userhost)
@@ -158,14 +176,24 @@ def del_portfolio(nick, userhost, args):
     return ['Invalid arguments']
 
 def get_help():
-   return ".portfolio [<nickname>] [add <symbol> [price]] [del <symbol>] - Get the portfolio for a user"
+   return ".portfolio [nickname] [add <symbol> [price]] [del <symbol>] - Get the portfolio for a user"
 
-def run(nick, userhost, args=[]):
+def run(nick, userhost, args=[], database=None):
+    if not database:
+        return ['No database specified']
+
+    global engine
+    engine = create_engine('sqlite:///%s' % database)
+    Base.metadata.create_all(engine)
+
     if len(args) == 0:
         p = user_portfolio(nick, userhost)
         if not p:
             return ['You have not created a portfolio, %s' % nick]
-        return ["[%s] %s" % (nick, p[0])]
+        response = []
+        for r in p:
+            response.append("[%s] %s" % (nick, r))
+        return response
     if args[0] == 'add':
         return add_portfolio(nick, userhost, args[1:])
     if args[0] == 'del':
@@ -174,5 +202,8 @@ def run(nick, userhost, args=[]):
         p = user_portfolio(args[0], '')
         if not p:
             return ['No portfolio found for %s' % args[0]]
-        return ["[%s] %s" % (args[0], p[0])]
+        response = []
+        for r in p:
+            response.append("[%s] %s" % (args[0], r))
+        return response
     return ['HAHAHA no']

@@ -1,12 +1,17 @@
+import logging
 import pytz
 
 from datetime import datetime, time
 from yahoo_finance.quote import Quote
 
+log = logging.getLogger(__name__)
+
 def format_title(name, symbol):
     return "\x02%s\x02 (\x02%s\x02)" % (name, symbol)
 
 def format_change(curr, prev):
+    if not curr or not prev:
+        return None
     curr = str(curr).replace(',', '')
     prev = str(prev).replace(',', '')
     diff = float(curr) - float(prev)
@@ -28,11 +33,17 @@ def format_pre_market(current, close):
         return "pre-market: %s" % format_change(current, close)
     return None
 
-def run(nick, userhost, args=[]):
+def run(nick, userhost, args=[], database=None):
     if len(args) != 1:
         return
     BAR_SEP = "\x0307|\x03"
-    stock = Quote(args[0])
+    try:
+        stock = Quote(args[0])
+    except Exception, e:
+        import traceback
+        traceback.print_exc()
+        log.exception(e)
+        return ["Query failed."]
     title = format_title(stock.get_name(), stock.get_symbol())
     prev_close = stock.get_prev_close()
     day_open = stock.get_open()

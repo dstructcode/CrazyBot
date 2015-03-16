@@ -1,6 +1,7 @@
 from datetime import datetime
 from urllib import quote
-from yahoo.yql import YQLQuery
+from yql import YQLQuery
+import traceback
 
 class InvalidSymbolError(Exception):
     def __init__(self, value):
@@ -57,30 +58,64 @@ class DataPoint(object):
         return self.day_adj_close
 
 
-class Quote(object):
-    def __init__(self, symbol):
-        if len(symbol) == 0:
-            raise InvalidSymbolError("No symbol specified")
-        self.symbol = symbol
+class GroupQuote(object):
+    def __init__(self, symbols=[]):
+        if len(symbols) == 0:
+            raise InvalidSymbolError("No symbol(s) specified")
+        self.symbols = symbols
+        self.quotes = {}
         self.refresh()
-        return
-    
+
     def _process_query_error(self, response):
         try:
-            raise YQLQueryError(response['error'])
+            raise YQLQueryError(response['error']['description'])
         except (TypeError, KeyError):
             raise YQLQueryError(response)
 
     def refresh(self):
-        query = "select * from yahoo.finance.quotes where symbol=\"%s\"" % self.symbol
+        symbols_str = ''
+        for symbol in self.symbols:
+            symbols_str = symbols_str + "\"%s\"," % symbol
+        symbols_str = symbols_str.rstrip(',')
+        query = "select * from yahoo.finance.quotes where symbol in (%s)" % symbols_str
         response = YQLQuery().execute(query)
         try:
-            self.quote = response['query']['results']['quote']
-            if self.quote['ErrorIndicationreturnedforsymbolchangedinvalid']:
-                raise InvalidSymbolError(self.get_symbol())
+            quote = response['query']['results']['quote']
+            if isinstance(quote, list):
+                quotes = {}
+                for q in quote:
+                    bq = BaseQuote(q)
+                    quotes[bq.get_symbol()] = bq
+                self.quotes = quotes
+            else:
+                bq = BaseQuote(quote)
+                self.quotes[bq.get_symbol()] = bq
         except (TypeError, KeyError):
+            traceback.print_exc()
             self._process_query_error(response)
-       
+
+    def symbols(self):
+        return self.quotes.keys()
+
+    def get(self, symbol):
+        symbol = symbol.upper()
+        if symbol in self.quotes:
+            return self.quotes[symbol.upper()]
+        return None
+
+
+class BaseQuote(object):
+
+    def __init__(self, quote):
+        self.quote = quote
+        self.symbol = self.get_symbol()
+
+    def _process_query_error(self, response):
+        try:
+            raise YQLQueryError(response['error']['description'])
+        except (TypeError, KeyError):
+            raise YQLQueryError(response)
+
     def get_price(self):
         query = "select * from html where url='http://finance.yahoo.com/q?s=%s' and xpath='//span[@class=\"time_rtq_ticker\"]'" % quote(self.symbol)
         response = YQLQuery().execute(query)
@@ -118,6 +153,9 @@ class Quote(object):
     def get_bid(self):
         return self.quote['BidRealTime']
 
+    def get_dividend(self):
+        return self.quote['DividendYield']
+
     def get_earnings_share(self):
         return self.quote['EarningsShare']
 
@@ -140,7 +178,11 @@ class Quote(object):
         return self.quote['DaysRange']
 
     def get_trend(self):
-        return self.quote['TickerTrend'].strip('&nbsp;')
+        # Sometimes the TickerTrend comes back as null
+        trend = self.quote['TickerTrend']
+        if trend:
+            trend = trend.strip('&nbsp;')
+        return trend
 
     def get_historical(self, start, end):
         query = "select * from yahoo.finance.historicaldata where symbol = \"%s\" and startDate = \"%s\" and endDate = \"%s\"" % (self.symbol, start, end)
@@ -151,5 +193,29 @@ class Quote(object):
             for point in points:
                 data.append(DataPoint(point['Symbol'], point['Date'], point['Open'], point['High'], point['Low'], point['Close'], point['Volume'], point['Adj_Close']))
             return data
+        except (TypeError, KeyError):
+            self._process_query_error(response)
+
+
+class Quote(BaseQuote):
+    def __init__(self, symbol):
+        if len(symbol) == 0:
+            raise InvalidSymbolError("No symbol specified")
+        self.symbol = symbol
+        self.refresh()
+
+    def _process_query_error(self, response):
+        try:
+            raise YQLQueryError(response['error']['description'])
+        except (TypeError, KeyError):
+            raise YQLQueryError(response)
+
+    def refresh(self):
+        query = "select * from yahoo.finance.quotes where symbol=\"%s\"" % self.symbol
+        response = YQLQuery().execute(query)
+        try:
+            self.quote = response['query']['results']['quote']
+            if self.quote['ErrorIndicationreturnedforsymbolchangedinvalid']:
+                raise InvalidSymbolError(self.get_symbol())
         except (TypeError, KeyError):
             self._process_query_error(response)

@@ -1,7 +1,7 @@
 from yahoo.yql import YQLQuery
 from yahoo_finance.quote import Quote
 
-def run(nick, userhost, args=[]):
+def run(nick, userhost, args=[], database=None):
     if len(args) == 1:
         stock = Quote(args[0])
         symbol = stock.get_symbol()
