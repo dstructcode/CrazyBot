@@ -1,6 +1,10 @@
 from yahoo.yql import YQLQuery
 from yahoo_finance.quote import Quote
 
+import logging
+
+log = logging.getLogger(__name__)
+
 class Headline(object):
     def __init__(self, headline):
         self._parse_headline(headline)
@@ -28,8 +32,17 @@ class Headline(object):
 
 
 def run(nick, userhost, args=[], database=None):
-    if len(args) != 1:
-        return
+    if len(args) == 0 or len(args) > 2:
+        return [get_help()]
+
+    count = 1
+    if len(args) == 2:
+        try:
+            count = int(args[1])
+        except ValueError, e:
+            log.exception(e)
+            return [get_help()]
+
     stock = Quote(args[0])
     symbol = stock.get_symbol()
     query = "select * from html where url='http://finance.yahoo.com/q?s=%s' and xpath='//div[@id=\"yfi_headlines\"]/div[2]/ul/li'" % symbol
@@ -41,8 +54,10 @@ def run(nick, userhost, args=[], database=None):
             headlines = []
             for headline in headline_list:
                 headlines.append(Headline(headline))
-            return headlines[:3]
+            if len(headlines) < count:
+                count = len(headlines) - 1
+            return headlines[:count]
 
 
 def get_help():
-    return ".headlines <symbol> - Get the last 3 headlines for this symbol"
+    return ".news <symbol> [amount] - Get news articles for the specified symbol"
