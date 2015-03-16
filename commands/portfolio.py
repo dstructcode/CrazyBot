@@ -94,13 +94,13 @@ def user_portfolio(nick, userhost):
         if quote:
             try:
                 change = format_change(quote.get_price(), price)
-                response = response + '%s %s (%.2f): %s ' % (BAR_SEP, symbol, price, change)
+                response = response + '%s \x1F%s\x1F (%.2f): %s ' % (BAR_SEP, symbol, price, change)
                 if len(response) > 256:
                     response_list.append(response)
                     response = ''
             except Exception, e:
                 log.exception(e)
-                response = response + '%s %s (%.2f): %s ' % (BAR_SEP, symbol, 0.00, "Unknown")
+                response = response + '%s \x1F%s\x1F (%.2f): %s ' % (BAR_SEP, symbol, 0.00, "Unknown")
     if len(response) > 0:
         response_list.append(response)
 #    response = response + '%s' % (BAR_SEP)
