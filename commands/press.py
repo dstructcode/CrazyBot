@@ -1,6 +1,10 @@
 from yahoo.yql import YQLQuery
 from yahoo_finance.quote import Quote
 
+import logging
+
+log = logging.getLogger(__name__)
+
 def run(nick, userhost, args=[], database=None):
     if len(args) == 1:
         stock = Quote(args[0])
@@ -28,9 +32,8 @@ def run(nick, userhost, args=[], database=None):
                         return ["%s %s: %s" % (date, title, url)]
                     else:
                         return ["%s: %s" % (title, url)]
-                except Exception:
-                    import traceback
-                    print traceback.format_exc()
+                except Exception, e:
+                    log.exception(e)
 
 def get_help():
     return ".press <symbol> - Get the latest press release"

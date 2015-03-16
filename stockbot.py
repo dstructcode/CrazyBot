@@ -6,7 +6,6 @@ import daemon
 import logging
 import os
 import sys
-import traceback
 import irc.buffer
 import irc.bot
 import irc.client

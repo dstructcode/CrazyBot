@@ -40,8 +40,6 @@ def run(nick, userhost, args=[], database=None):
     try:
         stock = Quote(args[0])
     except Exception, e:
-        import traceback
-        traceback.print_exc()
         log.exception(e)
         return ["Query failed."]
     title = format_title(stock.get_name(), stock.get_symbol())

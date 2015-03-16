@@ -1,7 +1,10 @@
 from datetime import datetime
 from urllib import quote
 from yql import YQLQuery
-import traceback
+
+import logging
+
+log = logging.getLogger(__name__)
 
 class InvalidSymbolError(Exception):
     def __init__(self, value):
@@ -90,8 +93,8 @@ class GroupQuote(object):
             else:
                 bq = BaseQuote(quote)
                 self.quotes[bq.get_symbol()] = bq
-        except (TypeError, KeyError):
-            traceback.print_exc()
+        except (TypeError, KeyError), e:
+            log.exception(e)
             self._process_query_error(response)
 
     def symbols(self):

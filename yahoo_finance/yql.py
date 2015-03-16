@@ -1,7 +1,9 @@
-import httplib, urllib, simplejson, traceback
+import httplib, urllib, simplejson, logging
 
 PUBLIC_API_URL = 'htp://query.yahooapis.com/v1/public/yql'
 DATATABLES_URL = 'store://datatables.org/alltableswithkeys'
+
+log = logging.getLogger(__name__)
 
 class YQLQuery(object):
 
@@ -13,7 +15,7 @@ class YQLQuery(object):
         response = self.connection.getresponse().read()
         try:
             response = simplejson.loads(response)
-        except:
-            traceback.print_exc()
-            print response
+        except Exception, e:
+            log.exception(e)
+            log.debug(response)
         return response
