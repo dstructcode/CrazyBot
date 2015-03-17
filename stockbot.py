@@ -30,9 +30,10 @@ class IgnoreErrorsBuffer(irc.buffer.DecodingLineBuffer):
 irc.client.ServerConnection.buffer_class = IgnoreErrorsBuffer
 
 class StockBot(irc.bot.SingleServerIRCBot):
-    def __init__(self, nickname, channels, server, port=6667, database=None):
+    def __init__(self, nickname, password, channels, server, port=6667, database=None):
         log.info("Instantiating StockBot for server %s" % server)
         irc.bot.SingleServerIRCBot.__init__(self, [(server, port)], nickname, nickname)
+        self.password = password
         self.channel_list = channels
         self.database = database
 
@@ -40,7 +41,8 @@ class StockBot(irc.bot.SingleServerIRCBot):
         c.nick(c.get_nickname() + "_")
 
     def on_welcome(self, c, e):
-        c.privmsg('nickserv', 'identify jd0205')
+        if self.password:
+            c.privmsg('nickserv', 'identify %s' % self.password)
         for channel in self.channel_list:
             c.join(channel)
 
@@ -114,12 +116,16 @@ def main():
                 sys.exit(-1)
             nickname = meta['nickname']
 
+            password = None
+            if 'password' in meta:
+                password = meta['password']
+
             if 'channels' not in meta:
                 log.error('No channels specified for server [%s]' % server)
                 sys.exit(-1)
             channels = meta['channels']
 
-            bots.append(BotThread(StockBot(nickname, channels, server, port, database)))
+            bots.append(BotThread(StockBot(nickname, password, channels, server, port, database)))
 
         for bot in bots:
             bot.start()
