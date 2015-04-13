@@ -1,0 +1,12 @@
+connections:
+    irc.freenode.net:
+        nickname: "CrazyBot"
+        password: "password"
+        channels:
+            - "#python"
+            - "#crazybot"
+#    irc.server.net:
+#        nickname: "CrazyBot"
+#        channels:
+#            - "#crazybot"
+#    ...
