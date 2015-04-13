@@ -1,8 +1,6 @@
-Dependencies
+CrazyBot
+========
 
-pip install irc
-pip install python-daemon
-pip install pyyaml
-pip install pytz
-pip install simplejson
-pip install sqlalchemy
+Dependencies
+------------
+`pip install irc python-daemon pyyaml pytz simplejson sqlalchemy`
