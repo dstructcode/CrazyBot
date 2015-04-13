@@ -15,7 +15,7 @@ class YQLQuery(object):
         response = self.connection.getresponse().read()
         try:
             response = simplejson.loads(response)
-        except Exception, e:
+        except Exception as e:
             log.exception(e)
             log.debug(response)
         return response

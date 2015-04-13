@@ -93,7 +93,7 @@ class GroupQuote(object):
             else:
                 bq = BaseQuote(quote)
                 self.quotes[bq.get_symbol()] = bq
-        except (TypeError, KeyError), e:
+        except (TypeError, KeyError) as e:
             log.exception(e)
             self._process_query_error(response)
 
