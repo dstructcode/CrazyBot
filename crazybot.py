@@ -19,7 +19,7 @@ LOG_FILENAME = 'crazybot.log'
 
 install_dir = os.path.dirname(os.path.abspath(__file__))
 
-logging.basicConfig(filename=install_dir+'/'+LOG_FILENAME, level=logging.DEBUG)
+logging.basicConfig(filename=os.path.join(install_dir, LOG_FILENAME), level=logging.DEBUG)
 log = logging.getLogger(__name__)
 fh = logging.root.handlers[0]
 context = daemon.DaemonContext(
@@ -102,20 +102,20 @@ class StockBot(irc.bot.SingleServerIRCBot):
         return [ d for d in dirs if not d.startswith(ignore) ]
 
     def _reloader(self, base, path):
-        mnames = [name for _, name, _ in pkgutil.iter_modules([base+os.sep+path])]
+        mnames = [name for _, name, _ in pkgutil.iter_modules([os.path.join(base, path)])]
         if not mnames:
             return
         for m in mnames:
-            sub_module = path + '/' + m
+            sub_module = os.path.join(path, m)
             self._reloader(base, sub_module)
             module = import_module(sub_module.replace('/', '.'))
             reload(module)
 
     def _register_commands(self):
         self.commands = []
-        cmds = self._list_modules(install_dir + os.sep + 'commands')
+        cmds = self._list_modules(os.path.join(install_dir, 'commands'))
         for c in cmds:
-            self._reloader(install_dir, 'commands' + os.sep + c)
+            self._reloader(install_dir, os.path.join('commands', c))
             module = import_module('commands.' + c)
             reload(module)
 
@@ -138,7 +138,7 @@ class BotThread(Thread):
 
 def main():
     try: 
-        f = open(install_dir+'/crazybot.yaml')
+        f = open(os.path.join(install_dir, 'crazybot.yaml'))
         conf = yaml.safe_load(f)
         f.close()
 
@@ -174,7 +174,6 @@ def main():
         for bot in bots:
             bot.start()
     except Exception as e:
-        print e
         log.exception(e)
 
 if __name__ == "__main__":
