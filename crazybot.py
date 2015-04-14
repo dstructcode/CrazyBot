@@ -21,7 +21,7 @@ LOG_FILENAME = 'crazybot.log'
 
 install_dir = os.path.dirname(os.path.abspath(__file__))
 
-logging.basicConfig(filename=os.path.join(install_dir, LOG_FILENAME), level=logging.DEBUG)
+logging.basicConfig(filename=os.path.join(install_dir, LOG_FILENAME), level=logging.INFO)
 log = logging.getLogger(__name__)
 fh = logging.root.handlers[0]
 context = daemon.DaemonContext(
