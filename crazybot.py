@@ -119,9 +119,11 @@ class StockBot(irc.bot.SingleServerIRCBot):
             module = import_module('commands.' + c)
             reload(module)
 
-            load = getattr(module, 'load_command', None)
-            if load:
-                self.commands.append(load())
+            do_nothing = lambda: None
+            load = getattr(module, 'load_command', do_nothing)
+            cmd = load()
+            if cmd:
+                self.commands.append(cmd)
 
     def _register_listeners(self):
         self.listeners = []
