@@ -31,9 +31,9 @@ class Portfolios(Command):
                 response.append("[%s] %s" % (nick, r))
             return response
         if args[0] == 'add':
-            return add_portfolio(nick, userhost, args[1:])
+            return self.add_portfolio(nick, userhost, args[1:])
         if args[0] == 'del':
-            return del_portfolio(nick, userhost, args[1:])
+            return self.del_portfolio(nick, userhost, args[1:])
         if len(args) == 1:
             p = self.user_portfolio(args[0], '')
             if not p:
