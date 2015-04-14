@@ -47,9 +47,9 @@ class UpdateHandler(FileSystemEventHandler):
         if not os.path.basename(event.src_path).startswith('.'):
             self.bot.rehash()
 
-class StockBot(irc.bot.SingleServerIRCBot):
+class CrazyBot(irc.bot.SingleServerIRCBot):
     def __init__(self, nickname, password, channels, server, port=6667):
-        log.info("Instantiating StockBot for server %s" % server)
+        log.info("Instantiating CrazyBot for server %s" % server)
         irc.bot.SingleServerIRCBot.__init__(self, [(server, port)], nickname, nickname)
         self.password = password
         self.channel_list = channels
@@ -188,7 +188,7 @@ def main():
                 sys.exit(-1)
             channels = meta['channels']
 
-            bots.append(BotThread(StockBot(nickname, password, channels, server, port)))
+            bots.append(BotThread(CrazyBot(nickname, password, channels, server, port)))
 
         for bot in bots:
             bot.start()
