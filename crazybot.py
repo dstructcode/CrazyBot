@@ -2,6 +2,8 @@
 
 from importlib import import_module
 from threading import Thread
+from watchdog.observers import Observer
+from watchdog.events import FileSystemEventHandler
 
 import logging
 import os
@@ -33,6 +35,18 @@ class IgnoreErrorsBuffer(irc.buffer.DecodingLineBuffer):
         pass
 irc.client.ServerConnection.buffer_class = IgnoreErrorsBuffer
 
+class UpdateHandler(FileSystemEventHandler):
+    def __init__(self, bot):
+        self.bot = bot
+
+    def on_created(self, event):
+        if not os.path.basename(event.src_path).startswith('.'):
+            self.bot.rehash()
+
+    def on_modified(self, event):
+        if not os.path.basename(event.src_path).startswith('.'):
+            self.bot.rehash()
+
 class StockBot(irc.bot.SingleServerIRCBot):
     def __init__(self, nickname, password, channels, server, port=6667):
         log.info("Instantiating StockBot for server %s" % server)
@@ -41,6 +55,9 @@ class StockBot(irc.bot.SingleServerIRCBot):
         self.channel_list = channels
         self._register_commands()
         self._register_listeners()
+        self.observer = Observer()
+        self.observer.schedule(UpdateHandler(self), os.path.join(install_dir, 'commands'), recursive=True)
+        self.observer.start()
 
     def on_nicknameinuse(self, c, e):
         c.nick(c.get_nickname() + "_")
@@ -77,7 +94,12 @@ class StockBot(irc.bot.SingleServerIRCBot):
                         c.privmsg(e.target, msg)
                 except Exception as e:
                     log.exception(e)
-                
+
+    def rehash(self):
+        self._register_commands()
+        self._register_listeners()
+        log.debug('Rehash complete')
+
     def _iterable(self, obj):
         if not obj:
             return []
@@ -90,11 +112,6 @@ class StockBot(irc.bot.SingleServerIRCBot):
         for cmd in self.commands:
             triggers += cmd.triggers()
         return ['Commands: {cmds}'.format(cmds=' '.join(triggers)), '<command> -help']
-
-    def _rehash(self):
-        self._register_commands()
-        self._register_listeners()
-        return 'Rehash complete.'
 
     def _list_modules(self, path):
         ignore = ('.', '__')

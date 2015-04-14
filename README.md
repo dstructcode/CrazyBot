@@ -3,4 +3,4 @@ CrazyBot
 
 Dependencies
 ------------
-`pip install irc python-daemon pyyaml pytz simplejson sqlalchemy`
+`pip install irc python-daemon pyyaml pytz simplejson sqlalchemy watchdog`
