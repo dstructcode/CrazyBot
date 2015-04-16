@@ -30,10 +30,7 @@ context = daemon.DaemonContext(
     ],
 )
 
-class IgnoreErrorsBuffer(irc.buffer.DecodingLineBuffer):
-    def handle_exception(self):
-        pass
-irc.client.ServerConnection.buffer_class = IgnoreErrorsBuffer
+irc.client.ServerConnection.buffer_class = irc.buffer.LenientDecodingLineBuffer
 
 class UpdateHandler(FileSystemEventHandler):
     def __init__(self, bot):
