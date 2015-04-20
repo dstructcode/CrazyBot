@@ -180,6 +180,12 @@ class BaseQuote(object):
     def get_day_range(self):
         return self.quote['DaysRange']
 
+    def get_volume(self):
+        return self.quote['Volume']
+
+    def get_average_volume(self):
+        return self.quote['AverageDailyVolume']
+
     def get_trend(self):
         # Sometimes the TickerTrend comes back as null
         trend = self.quote['TickerTrend']

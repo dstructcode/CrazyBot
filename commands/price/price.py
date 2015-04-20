@@ -34,13 +34,14 @@ class Price(Command):
         day_open = stock.get_open()
         day_high = stock.get_day_high()
         day_low = stock.get_day_low()
+        volume = stock.get_volume()
         current = stock.get_price()
         now = datetime.now(pytz.timezone('US/Eastern'))
         # Between market close and open (4:00pm and 9:30am)
         if time(16,00) <= now.time() or time(9,30) >= now.time():
             close = util.format_change(current, prev_close)
-            close_str = "%s %s previous close: %s %s open: %s %s high: %s %s low: %s %s close: %s" % \
-            (title, BAR_SEP, prev_close, BAR_SEP, day_open, BAR_SEP, day_high, BAR_SEP, day_low, BAR_SEP, close)
+            close_str = "%s %s previous close: %s %s open: %s %s high: %s %s low: %s %s volume: %s %s close: %s" % \
+            (title, BAR_SEP, prev_close, BAR_SEP, day_open, BAR_SEP, day_high, BAR_SEP, day_low, BAR_SEP, volume, BAR_SEP, close)
             updated = None
             try:
                 updated = stock.get_after_hours()
@@ -58,5 +59,5 @@ class Price(Command):
                     return ["%s %s %s" % (close_str, BAR_SEP, pre_market)]
             return [close_str]
         change = util.format_change(current, prev_close)
-        return ["%s %s previous close: %s %s open: %s %s high: %s %s low: %s %s current: %s" % \
-        (title, BAR_SEP, prev_close, BAR_SEP, day_open, BAR_SEP, day_high, BAR_SEP, day_low, BAR_SEP, change)]   
+        return ["%s %s previous close: %s %s open: %s %s high: %s %s low: %s %s volume: %s %s current: %s" % \
+        (title, BAR_SEP, prev_close, BAR_SEP, day_open, BAR_SEP, day_high, BAR_SEP, day_low, BAR_SEP, volume, BAR_SEP, change)]   
