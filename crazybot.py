@@ -50,10 +50,12 @@ class CrazyBot(irc.bot.SingleServerIRCBot):
         irc.bot.SingleServerIRCBot.__init__(self, [(server, port)], nickname, nickname)
         self.password = password
         self.channel_list = channels
-        self._register_commands()
-        self._register_listeners()
+        self.commands = []
+        self.listeners = []
+        self.rehash()
         self.observer = Observer()
         self.observer.schedule(UpdateHandler(self), os.path.join(install_dir, 'commands'), recursive=True)
+        self.observer.schedule(UpdateHandler(self), os.path.join(install_dir, 'listeners'), recursive=True)
         self.observer.start()
 
     def on_nicknameinuse(self, c, e):
@@ -76,6 +78,14 @@ class CrazyBot(irc.bot.SingleServerIRCBot):
             response = method()
             for msg in self._iterable(response):
                 c.privmsg(e.target, msg)
+                return
+
+        for listener in self.listeners:
+            try:
+                for response in self._iterable(listener.run(' '.join(msg))):
+                    c.privmsg(e.target, response)
+            except Exception as e:
+                log.exception(e)
 
         for cmd in self.commands:
             if trigger in cmd.triggers():
@@ -93,8 +103,7 @@ class CrazyBot(irc.bot.SingleServerIRCBot):
                     log.exception(e)
 
     def rehash(self):
-        self._register_commands()
-        self._register_listeners()
+        self._register_plugins()
         log.debug('Rehash complete')
 
     def _iterable(self, obj):
@@ -115,6 +124,14 @@ class CrazyBot(irc.bot.SingleServerIRCBot):
         dirs = next(os.walk(path))[1]
         return [ d for d in dirs if not d.startswith(ignore) ]
 
+    def _reload(self, module):
+        try:
+            m = import_module(module)
+            reload(m)
+            return m
+        except Exception as e:
+            log.exception(e)
+
     def _reloader(self, base, path):
         mnames = [name for _, name, _ in pkgutil.iter_modules([os.path.join(base, path)])]
         if not mnames:
@@ -122,25 +139,25 @@ class CrazyBot(irc.bot.SingleServerIRCBot):
         for m in mnames:
             sub_module = os.path.join(path, m)
             self._reloader(base, sub_module)
-            module = import_module(sub_module.replace('/', '.'))
-            reload(module)
+            self._reload(sub_module.replace('/', '.'))
 
-    def _register_commands(self):
-        self.commands = []
-        cmds = self._list_modules(os.path.join(install_dir, 'commands'))
-        for c in cmds:
-            self._reloader(install_dir, os.path.join('commands', c))
-            module = import_module('commands.' + c)
-            reload(module)
-
-            do_nothing = lambda: None
-            load = getattr(module, 'load_command', do_nothing)
-            cmd = load()
-            if cmd:
-                self.commands.append(cmd)
-
-    def _register_listeners(self):
-        self.listeners = []
+    def _register_plugins(self):
+        types = ['commands', 'listeners']
+        for t in types:
+            plugins = getattr(self, t)
+            plugins[:] = []
+            modules = self._list_modules(os.path.join(install_dir, t))
+            for m in modules:
+                self._reloader(install_dir, os.path.join(t, m))
+                module = self._reload(t+'.'+m)
+                if not module:
+                    pass
+                func = 'load_{t}'.format(t=t.rstrip('s'))
+                do_nothing = lambda: None
+                load = getattr(module, func, do_nothing)
+                plugin = load()
+                if plugin:
+                    plugins.append(plugin)
 
 
 class BotThread(Thread):
