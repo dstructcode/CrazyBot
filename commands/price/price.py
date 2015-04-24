@@ -12,7 +12,7 @@ from plugin.command import Command
 
 class Price(Command):
 
-    def help(self):
+    def help(self, trigger):
         return ".price <symbol> - Get price info about a particular stock"
 
     def triggers(self):
