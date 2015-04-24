@@ -32,7 +32,7 @@ class Portfolios(Command):
             return response
         if args[0] == 'add':
             return self.add_portfolio(nick, userhost, args[1:])
-        if args[0] == 'del':
+        if args[0] in ['del', 'delete', 'rm', 'remove']:
             return self.del_portfolio(nick, userhost, args[1:])
         if len(args) == 1:
             p = self.user_portfolio(args[0], '')
