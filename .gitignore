@@ -6,3 +6,6 @@
 
 # database
 *.db
+
+# logs
+*.log
