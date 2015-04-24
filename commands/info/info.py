@@ -3,7 +3,7 @@ from plugin.command import Command
 
 class Info(Command):
     
-    def help(self):
+    def help(self, trigger):
         return ".info <symbol> - Get more info about a particular stock"
 
     def triggers(self):
