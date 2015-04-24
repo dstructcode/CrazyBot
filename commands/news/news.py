@@ -35,7 +35,7 @@ class Headline(object):
 
 class News(Command):
 
-    def help(self):
+    def help(self, trigger=None):
         return ".news <symbol> [amount] - Get news articles for the specified symbol"
 
     def triggers(self):
