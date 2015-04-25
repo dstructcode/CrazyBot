@@ -6,7 +6,7 @@ from sqlalchemy.orm.exc import NoResultFound
 from commands.weather import User, Location
 from plugin.command import Command
 
-import httplib, urllib, simplejson, logging, forecastio, re
+import httplib, urllib, simplejson, logging, forecastio, re, socket
 
 log = logging.getLogger(__name__)
 
@@ -18,7 +18,7 @@ class Weather(Command):
         self.engine = engine
 
     def help(self, trigger):
-        return ".w [place] [add <place>]"
+        return [".w [place] [+ <place>] [--]"]
 
     def triggers(self):
         return ['.w', '.weather']
@@ -28,18 +28,20 @@ class Weather(Command):
         userhost = source.userhost
         if len(args) == 0:
             return self.get_weather(nick, userhost)
-        if args[0] == 'add':
+        if args[0] == '+':
+            location = ' '.join(args[1:])
             user = self.get_user(nick, userhost)
             if user:
-                return self.update_location(user, args[1:])
-            return self.add_location(nick, userhost, args[1:])
+                return self.update(nick, user, location)
+            return self.add(nick, userhost, location)
+        if args[0] == '--':
+            return self.reset(nick, userhost)
         user = self.get_user(args[0], None)
         if user:
             return self.get_weather_by_user(user)
         return self.get_weather_by_location(' '.join(args))
 
-    def add_location(self, nick, userhost, location):
-        location = ' '.join(location)
+    def add(self, nick, userhost, location):
         if not self.get_weather_by_location(location):
             return "[{nick}] Not a valid location.".format(nick=nick)
         Session = sessionmaker(bind=self.engine)
@@ -53,8 +55,7 @@ class Weather(Command):
         session.close()
         return "[{nick}] Location added.".format(nick=nick)
 
-    def update_location(self, user, new):
-        new = ' '.join(new)
+    def update(self, nick, user, new):
         if not self.get_weather_by_location(new):
             return "[{nick}] Not a valid location.".format(nick=user.nick)
         Session = sessionmaker(bind=self.engine)
@@ -63,7 +64,19 @@ class Weather(Command):
         location.location = new
         session.commit()
         session.close()
-        return "[{nick}] Location updated.".format(nick=user.nick)
+        return "[{nick}] Location updated.".format(nick=nick)
+
+    def reset(self, nick, userhost):
+        user = self.get_user(nick, userhost)
+        if not user:
+            return
+        Session = sessionmaker(bind=self.engine)
+        session = Session()
+        location = session.query(Location).filter(Location.user.has(id=user.id)).one()
+        location.location = None
+        session.commit()
+        session.close()
+        return "[{nick}] Location reset.".format(nick=user.nick)
 
     def get_weather_by_user(self, user):
         Session = sessionmaker(bind=self.engine)
@@ -126,12 +139,15 @@ class Weather(Command):
     def get_weather(self, nick, userhost):
         location = self.get_location(nick, userhost)
         if not location:
-            ipv4 = re.findall(r'\b\d{1,3}[\.\-]\d{1,3}[\.\-]\d{1,3}[\.\-]\d{1,3}\b', userhost)
-            ipv6 = re.findall(r'(?:(?:[0-9A-Fa-f]{1,4}:){6}(?:[0-9A-Fa-f]{1,4}:[0-9A-Fa-f]{1,4}|(?:(?:[0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}(?:[0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5]))|::(?:[0-9A-Fa-f]{1,4}:){5}(?:[0-9A-Fa-f]{1,4}:[0-9A-Fa-f]{1,4}|(?:(?:[0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}(?:[0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5]))|(?:[0-9A-Fa-f]{1,4})?::(?:[0-9A-Fa-f]{1,4}:){4}(?:[0-9A-Fa-f]{1,4}:[0-9A-Fa-f]{1,4}|(?:(?:[0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}(?:[0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5]))|(?:[0-9A-Fa-f]{1,4}:[0-9A-Fa-f]{1,4})?::(?:[0-9A-Fa-f]{1,4}:){3}(?:[0-9A-Fa-f]{1,4}:[0-9A-Fa-f]{1,4}|(?:(?:[0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}(?:[0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5]))|(?:(?:[0-9A-Fa-f]{1,4}:){,2}[0-9A-Fa-f]{1,4})?::(?:[0-9A-Fa-f]{1,4}:){2}(?:[0-9A-Fa-f]{1,4}:[0-9A-Fa-f]{1,4}|(?:(?:[0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}(?:[0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5]))|(?:(?:[0-9A-Fa-f]{1,4}:){,3}[0-9A-Fa-f]{1,4})?::[0-9A-Fa-f]{1,4}:(?:[0-9A-Fa-f]{1,4}:[0-9A-Fa-f]{1,4}|(?:(?:[0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}(?:[0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5]))|(?:(?:[0-9A-Fa-f]{1,4}:){,4}[0-9A-Fa-f]{1,4})?::(?:[0-9A-Fa-f]{1,4}:[0-9A-Fa-f]{1,4}|(?:(?:[0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}(?:[0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5]))|(?:(?:[0-9A-Fa-f]{1,4}:){,5}[0-9A-Fa-f]{1,4})?::[0-9A-Fa-f]{1,4}|(?:(?:[0-9A-Fa-f]{1,4}:){,6}[0-9A-Fa-f]{1,4})?::)', userhost)
-            if ipv4:
-                return self.get_weather_by_ip(ipv4[0].replace('-', '.'))
-            if ipv6:
-                return self.get_weather_by_ip(ipv6[0])
+            try:
+                # socket.getaddrinfo returns the following format:
+                # (family, socktype, proto, canonname, (ip, port[, flow info, scope]))
+                ip = socket.getaddrinfo(userhost.split('@')[1], 80)[0][4][0]
+                if ip:
+                    return self.get_weather_by_ip(ip)
+            except Exception as e:
+                log.exception(e)
+                pass
             return
         return self.get_weather_by_location(location)
 
