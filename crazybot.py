@@ -83,7 +83,7 @@ class CrazyBot(irc.bot.SingleServerIRCBot):
             response = method(msg)
             for msg in self._iterable(response):
                 c.privmsg(e.target, msg)
-                return
+            return
 
         for listener in self.listeners:
             try:
