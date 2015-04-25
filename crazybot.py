@@ -70,33 +70,33 @@ class CrazyBot(irc.bot.SingleServerIRCBot):
     def on_pubmsg(self, c, e):
         if not irc.client.is_channel(e.target):
             return
-        msg = e.arguments[0].strip().split()
-        trigger = msg[0]
+
+        line = e.arguments[0].strip()
+        if not all(ord(c) < 128 for c in line):
+            return
+
+        line = line.split()
+        trigger, msg = line[0], line[1:]
 
         method = getattr(self, "_" + trigger.lstrip('.'), None)
         if method:
-            response = method()
+            response = method(msg)
             for msg in self._iterable(response):
                 c.privmsg(e.target, msg)
                 return
 
         for listener in self.listeners:
             try:
-                for response in self._iterable(listener.run(' '.join(msg))):
+                for response in self._iterable(listener.run(' '.join(line))):
                     c.privmsg(e.target, response)
             except Exception as e:
                 log.exception(e)
 
         for cmd in self.commands:
             if trigger in cmd.triggers():
-                if len(msg) > 1 and msg[1] == '-help':
-                    for response in self._iterable(cmd.help(trigger)):
-                        c.privmsg(e.target, response)
-                    return
-
                 channel = self.channels[e.target]
                 try:
-                    response = cmd.run(e.source, channel, trigger, msg[1:])
+                    response = cmd.run(e.source, channel, trigger, msg)
                     for msg in self._iterable(response):
                         c.privmsg(e.target, msg)
                 except Exception as e:
@@ -113,11 +113,16 @@ class CrazyBot(irc.bot.SingleServerIRCBot):
             return obj
         return [obj]
 
-    def _help(self):
-        triggers = []
-        for cmd in self.commands:
-            triggers += cmd.triggers()
-        return ['Commands: {cmds}'.format(cmds=' '.join(triggers)), '<command> -help']
+    def _help(self, msg):
+        if not msg:
+            triggers = ' '.join([ t for c in self.commands for t in c.triggers() ])
+            return ['Commands: {cmds}'.format(cmds=triggers), '.help <command>']
+
+        if len(msg) == 1:
+            trigger = msg[0]
+            for cmd in self.commands:
+                if trigger in cmd.triggers():
+                    return cmd.help(trigger)
 
     def _list_modules(self, path):
         ignore = ('.', '__')
@@ -166,7 +171,10 @@ class BotThread(Thread):
         Thread.__init__(self)
 
     def run(self):
-        self._bot.start()
+        try:
+            self._bot.start()
+        except Exception as e:
+            log.exception(e)
 
 
 def main():
