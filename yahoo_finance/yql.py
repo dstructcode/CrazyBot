@@ -1,4 +1,4 @@
-import httplib, urllib2, simplejson, logging
+import httplib, urllib, simplejson, logging
 
 PUBLIC_API_URL = 'http://query.yahooapis.com/v1/public/yql'
 DATATABLES_URL = 'store://datatables.org/alltableswithkeys'
@@ -11,7 +11,7 @@ class YQLQuery(object):
         self.connection = httplib.HTTPConnection('query.yahooapis.com')
 
     def execute(self, yql, token = None):
-        self.connection.request('GET', PUBLIC_API_URL + '?' + urllib2.urlencode({'q': yql, 'format': 'json', 'env': DATATABLES_URL}, True))
+        self.connection.request('GET', PUBLIC_API_URL + '?' + urllib.urlencode({'q': yql, 'format': 'json', 'env': DATATABLES_URL}, True))
         response = self.connection.getresponse().read()
         try:
             response = simplejson.loads(response)
