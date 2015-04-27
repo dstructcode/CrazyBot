@@ -10,7 +10,7 @@ import httplib, urllib, simplejson, logging, forecastio, re, socket
 
 log = logging.getLogger(__name__)
 
-API_KEY = '4bb7463604cfc639a4fe526ed688052b'
+API_KEY = ''
 
 
 class Weather(Command):
