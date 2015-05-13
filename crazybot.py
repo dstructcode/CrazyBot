@@ -72,6 +72,9 @@ class CrazyBot(irc.bot.SingleServerIRCBot):
             return
 
         line = e.arguments[0].strip()
+        if not line:
+            return
+
         if not all(ord(c) < 128 for c in line):
             return
 
