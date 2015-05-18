@@ -1,10 +1,12 @@
 from plugin.command import Command
+from apiclient.discovery import build
 
 import urllib
 import unirest
 
-API_KEY = ""
-
+UD_API_KEY = ""
+G_API_KEY = ""
+G_CX = ""
 
 class LookUp(Command):
     def help(self, trigger):
@@ -12,11 +14,28 @@ class LookUp(Command):
             return ".ud <term>[:<index>]"
 
     def triggers(self):
-        return ['.ud']
+        return ['.g', '.ud']
 
     def run(self, source, channel, trigger, args):
         donothing = lambda: None
         return getattr(self, trigger.replace('.', '_'), donothing)(args)
+
+    def _g(self, args):
+        sep = " \x0307|\x03 "
+        term = ' '.join(args)
+        service = build("customsearch", "v1", developerKey=G_API_KEY)
+        result = service.cse().list(
+            q=term,
+            cx = G_CX,
+        ).execute()
+        if result and 'items' in result:
+            items = result['items']
+            first = items[0]
+            out = "{title}{sep}{snippet}{sep}{link}"
+            title = first['title']
+            snippet = first['snippet'].replace('\n', '').encode('ascii', 'ignore')
+            link = first['link']
+            return out.format(title=title, sep=sep, snippet=snippet, link=link)
 
     def _ud(self, args):
         sep = " \x0307|\x03 "
@@ -32,7 +51,7 @@ class LookUp(Command):
         term = urllib.urlencode({'term': term}, True)
         response = unirest.get(api.format(term=term),
             headers={
-                'X-Mashape-Key': API_KEY,
+                'X-Mashape-Key': UD_API_KEY,
                 'Accept': 'text/plain'
             }
         ).body
