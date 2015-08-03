@@ -32,9 +32,9 @@ class LookUp(Command):
             items = result['items']
             first = items[0]
             out = "{title}{sep}{snippet}{sep}{link}"
-            title = first['title']
+            title = first['title'].encode('ascii','ignore')
             snippet = first['snippet'].replace('\n', '').encode('ascii', 'ignore')
-            link = first['link']
+            link = first['link'].encode('ascii', 'ignore')
             return out.format(title=title, sep=sep, snippet=snippet, link=link)
 
     def _ud(self, args):
