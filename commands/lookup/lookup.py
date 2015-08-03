@@ -41,6 +41,9 @@ class LookUp(Command):
         sep = " \x0307|\x03 "
         api = "https://mashape-community-urban-dictionary.p.mashape.com/define?{term}"
 
+        if len(args) < 1:
+            return
+
         term = ' '.join(args).split(':')
         if len(term) == 2 and isint(term[1]):
             index = int(term[1])
