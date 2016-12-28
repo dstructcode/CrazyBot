@@ -4,9 +4,13 @@ from apiclient.discovery import build
 import urllib
 import unirest
 
-UD_API_KEY = ""
-G_API_KEY = ""
-G_CX = ""
+import logging
+
+log = logging.getLogger(__name__)
+
+UD_API_KEY = "L32NMdZZmJmshjNE8KZwAtwVsttyp1P8uoijsn0o3Y1ebQ8Wuz"
+G_API_KEY = "AIzaSyCeoZi86jV7nwpAI3gopca4Y7shUejM53Y"
+G_CX = "013520587482418216819:igs2ii0bdhy"
 
 class LookUp(Command):
     def help(self, trigger):
@@ -74,6 +78,10 @@ class LookUp(Command):
         for d in desc:
             for c in chunks(d, 384):
                 output.append(out.format(word=word, sep=sep, desc=c, index=index, total=len(defs)))
+
+        if len(output) > 3:
+            output = output[:3]
+            output.append("http://www.urbandictionary.com/define.php?%s" % (term))
 
         return output
 

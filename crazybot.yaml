@@ -1,12 +1,12 @@
 connections:
-    irc.freenode.net:
+    irc.esper.net:
         nickname: "CrazyBot"
-        password: "password"
+        password: "jd0205"
         channels:
-            - "#python"
+#            - "#casualteam"
+            - "#v()"
             - "#crazybot"
-#    irc.server.net:
+#    irc.quakenet.org:
 #        nickname: "CrazyBot"
 #        channels:
-#            - "#crazybot"
-#    ...
+#            - "#WellPlayed"

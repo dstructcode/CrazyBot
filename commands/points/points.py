@@ -3,6 +3,7 @@ from sqlalchemy.orm import sessionmaker
 from plugin.command import Command
 from commands.points import User, Point
 
+import datetime
 import logging
 
 log = logging.getLogger(__name__)
@@ -57,6 +58,12 @@ class Points(Command):
         try:
             user = session.query(User).filter(User.nick == nick).one()
             point = session.query(Point).filter(Point.user.has(id=user.id)).one()
+            delta = datetime.timedelta(minutes=1) + point.time
+            now = datetime.datetime.utcnow()
+            if now < delta:
+                session.close()
+                return
+            point.time = now
             point.count += 1
             session.commit()
             session.close()
@@ -81,6 +88,12 @@ class Points(Command):
         try:
             user = session.query(User).filter(User.nick == nick).one()
             point = session.query(Point).filter(Point.user.has(id=user.id)).one()
+            delta = datetime.timedelta(minutes=1) + point.time
+            now = datetime.datetime.utcnow()
+            if now < delta:
+                session.close()
+                return
+            point.time = now
             point.count -= 1
             session.commit()
             session.close()

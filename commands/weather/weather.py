@@ -10,7 +10,7 @@ import httplib, urllib, simplejson, logging, forecastio, re, socket
 
 log = logging.getLogger(__name__)
 
-API_KEY = ''
+API_KEY = '8829088043975bcc486fb84316867cab'
 
 
 class Weather(Command):
@@ -128,6 +128,7 @@ class Weather(Command):
             response = simplejson.loads(response)
             if response['status'] != 'success':
                 return
+            log.error(response)
             name = response['city'] + ', ' + response['region'] + ' ' + response['zip']
             forecast = self.get_forecast(response['lat'], response['lon'])
             curr = forecast.currently()
@@ -138,16 +139,17 @@ class Weather(Command):
 
     def get_weather(self, nick, userhost):
         location = self.get_location(nick, userhost)
+        log.error(location)
         if not location:
             try:
                 # socket.getaddrinfo returns the following format:
                 # (family, socktype, proto, canonname, (ip, port[, flow info, scope]))
                 ip = socket.getaddrinfo(userhost.split('@')[1], 80)[0][4][0]
                 if ip:
+                    log.error(ip)
                     return self.get_weather_by_ip(ip)
             except Exception as e:
                 log.exception(e)
-                pass
             return
         return self.get_weather_by_location(location)
 

@@ -13,7 +13,7 @@ class Portfolios(Command):
     def __init__(self, engine):
         self.engine = engine
 
-    def help(self):
+    def help(self, trigger):
        return ".portfolio [nickname] [add <symbol> [price]] [del <symbol>] - Get the portfolio for a user"
 
     def triggers(self):
@@ -164,6 +164,22 @@ class Portfolios(Command):
             return self.add_stock_price(args[0], args[1], portfolio)
         return ['Invalid arguments']
 
+    def clear_portfolio(self, portfolio):
+        Session = sessionmaker(bind=self.engine)
+        session = Session()
+        p = session.query(Portfolio).filter(Portfolio.id == portfolio.id).one()
+        stocks = session.query(Stock).filter(Stock.portfolio==p).all()
+        for s in stocks:
+            session.delete(s)
+        if stocks:
+            response = '[%s] %d deleted from portfolio' % (portfolio.user.nick, len(stocks))
+        else:
+            response = '[%s] Portfolio empty' % (portfolio.user.nick) 
+        session.commit()
+        session.close()
+        return [response]
+       
+
     def del_stock(self, stock, portfolio):
         Session = sessionmaker(bind=self.engine)
         session = Session()
@@ -182,7 +198,10 @@ class Portfolios(Command):
         portfolio = self.get_portfolio(nick, userhost)
         if not portfolio:
             return ['You have not created a portfolio, %s' % nick]
-        if len(args) == 1:
-            stock = Quote(args[0])
-            return self.del_stock(stock, portfolio)
+        if len(args) == 1 and args[0] == '*':
+            self.clear_portfolio(portfolio)
+        else:
+            for arg in args:
+                stock = Quote(arg)
+                return self.del_stock(stock, portfolio)
         return ['Invalid arguments']

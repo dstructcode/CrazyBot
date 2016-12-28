@@ -92,8 +92,8 @@ class CrazyBot(irc.bot.SingleServerIRCBot):
             try:
                 for response in self._iterable(listener.run(' '.join(line))):
                     c.privmsg(e.target, response)
-            except Exception as e:
-                log.exception(e)
+            except Exception as ex:
+                log.exception(ex)
 
         for cmd in self.commands:
             if trigger in cmd.triggers():
@@ -102,8 +102,8 @@ class CrazyBot(irc.bot.SingleServerIRCBot):
                     response = cmd.run(e.source, channel, trigger, msg)
                     for msg in self._iterable(response):
                         c.privmsg(e.target, msg)
-                except Exception as e:
-                    log.exception(e)
+                except Exception as ex:
+                    log.exception(ex)
 
     def rehash(self):
         self._register_plugins()

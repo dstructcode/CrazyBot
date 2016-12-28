@@ -120,18 +120,18 @@ class BaseQuote(object):
             raise YQLQueryError(response)
 
     def get_price(self):
-        query = "select * from html where url='http://finance.yahoo.com/q?s=%s' and xpath='//span[@class=\"time_rtq_ticker\"]'" % quote(self.symbol)
+        query = "select * from html where url='http://finance.yahoo.com/q?s=%s' and xpath='//span[@data-reactid=\"265\"]'" % quote(self.symbol)
         response = YQLQuery().execute(query)
         try:
-            return response['query']['results']['span']['span']['content']
+            return response['query']['results']['span']['content']
         except (TypeError, KeyError):
             self._process_query_error(response)
 
     def get_after_hours(self):
-        query = "select * from html where url='http://finance.yahoo.com/q?s=%s' and xpath='//span[@class=\"yfs_rtq_quote\"]'" % quote(self.symbol)
+        query = "select * from html where url='http://finance.yahoo.com/q?s=%s' and xpath='//span[@data-reactid=\"265\"]'" % quote(self.symbol)
         response = YQLQuery().execute(query)
         try:
-            return response['query']['results']['span']['span']['content']
+            return response['query']['results']['span']['content']
         except (TypeError, KeyError):
             self._process_query_error(response)
 
